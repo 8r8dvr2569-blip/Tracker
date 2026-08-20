@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Pay & Budget Planner</title>
+<style>
+:root {
+  --bg:#F4F6FA; --surface:#FFF; --surface2:#F0F3F8; --border:#E2E7EF;
+  --accent:#1A56A0; --accent2:#0E9B6E; --danger:#C0392B; --warn:#B7660A;
+  --text:#1A1D23; --muted:#6B7280; --radius:10px; --shadow:0 1px 4px rgba(0,0,0,.07);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+header{background:linear-gradient(135deg,#1A56A0,#0E3E7A);color:#fff;padding:16px 24px 13px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
+header p{font-size:11px;opacity:.7;margin-top:2px}
+.header-net{background:rgba(255,255,255,.15);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;white-space:nowrap}
+
+/* tabs */
+.main-tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;gap:2px;overflow-x:auto}
+.main-tab{padding:11px 16px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:3px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;flex-shrink:0}
+.main-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+.view{display:none;padding:18px 20px 48px;max-width:1040px;margin:0 auto}
+.view.active{display:block}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);margin-bottom:14px}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:12px}
+.card-heading{font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text)}
+
+/* grid */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr}.main-tab{padding:9px 11px;font-size:12px}}
+
+/* pills */
+.pills{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.pill{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:var(--shadow)}
+.pill .pl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.pill .pv{font-size:18px;font-weight:700;margin-top:3px}
+.pill .ps{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* month nav */
+.month-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.month-nav select{padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:14px;font-weight:600;background:var(--surface);color:var(--text);cursor:pointer}
+.month-nav select:focus{outline:none;border-color:var(--accent)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-3pay{background:#E8F7F1;color:#0A7A56}
+.badge-2pay{background:#EEF3FF;color:#1A56A0}
+.badge-carry{background:#FFF4E6;color:#B7660A}
+
+/* fortnight block */
+.fn-block{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px}
+.fn-header{background:var(--surface2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--border)}
+.fn-date{font-size:13px;font-weight:700;color:var(--accent)}
+.fn-body{padding:14px}
+
+/* expense rows */
+.exp-row{display:grid;grid-template-columns:1fr 140px 34px;gap:8px;align-items:center;margin-bottom:8px}
+.exp-row:last-child{margin-bottom:0}
+.exp-row input[type=text],.exp-row input[type=number],.exp-row select{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text)}
+.exp-row input:focus,.exp-row select:focus{outline:none;border-color:var(--accent)}
+.cat-select{font-size:12px;padding:6px 7px}
+.btn-del{background:none;border:1px solid #fcc;border-radius:5px;cursor:pointer;color:var(--danger);font-size:14px;padding:3px 8px;width:100%}
+.btn-del:hover{background:#fdecea}
+
+/* result rows */
+.rr{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.rr:last-child{border-bottom:none}
+.rr .rl{color:var(--muted)}
+.rr .rv{font-weight:600}
+.rr.big .rl{font-weight:600;color:var(--text);font-size:14px}
+.rr.big .rv{font-size:17px}
+.green{color:var(--accent2)}.red{color:var(--danger)}.blue{color:var(--accent)}.orange{color:var(--warn)}
+
+/* section label */
+.slabel{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px}
+
+/* progress */
+.prog-bg{width:100%;height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:5px 0 2px}
+.prog-fill{height:100%;border-radius:4px;transition:width .4s}
+.prog-label{font-size:11px;color:var(--muted)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-success{background:var(--accent2);color:#fff}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--text)}
+.btn-warn{background:#FFF4E6;color:var(--warn);border:1px solid #fdd9a5}
+.btn-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+
+/* field */
+.field{margin-bottom:11px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px;font-weight:500}
+.field input,.field select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;background:var(--surface);color:var(--text)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+.field .hint{font-size:11px;color:var(--muted);margin-top:3px}
+.field-inline{display:flex;gap:8px;align-items:flex-end}
+.field-inline .field{flex:1;margin-bottom:0}
+
+/* spending bars */
+.spend-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.spend-bar-label{width:110px;font-size:12px;color:var(--text);text-align:right;flex-shrink:0}
+.spend-bar-wrap{flex:1;background:var(--surface2);height:22px;border-radius:5px;overflow:hidden;position:relative}
+.spend-bar-fill{height:100%;border-radius:5px;transition:width .5s}
+.spend-bar-val{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:#fff;mix-blend-mode:multiply}
+.spend-bar-pct{width:42px;font-size:12px;font-weight:600;color:var(--muted);flex-shrink:0}
+
+/* cc tracker */
+.cc-timeline{display:flex;flex-direction:column;gap:0}
+.cc-row{display:grid;grid-template-columns:90px 1fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--border);font-size:12px}
+.cc-row.head{background:var(--surface2);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.cc-row div{padding:7px 10px}
+.cc-row.cleared{background:#EDF7F3}
+.cc-row.cleared div{color:#0A7A56;font-weight:600}
+
+/* info box */
+.info{background:#EEF4FF;border:1px solid #C7D9F8;border-radius:8px;padding:9px 13px;font-size:12px;color:#1A3A6E;margin-bottom:13px;line-height:1.6}
+.warn-box{background:#FFF4E6;border:1px solid #fdd9a5;border-radius:8px;padding:9px 13px;font-size:12px;color:#7A4500;margin-bottom:13px;line-height:1.6}
+
+/* divider */
+hr.div{border:none;border-top:1px solid var(--border);margin:10px 0}
+
+/* toast */
+#toast{position:fixed;bottom:22px;right:22px;background:var(--accent2);color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:opacity .3s;z-index:999}
+#toast.show{opacity:1}
+
+/* chart canvas */
+canvas{display:block}
+.chart-wrap{position:relative;width:100%;margin:0 auto}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>💼 Pay &amp; Budget Planner</h1>
+  </div>
+  <div class="header-net" id="header-net">Net/fn: $1,082.86</div>
+</header>
+
+<div class="main-tabs">
+  <button class="main-tab active"  onclick="switchTab('monthly',this)">📅 Monthly Tracker</button>
+  <button class="main-tab"         onclick="switchTab('analysis',this)">📊 Spending Analysis</button>
+  <button class="main-tab"         onclick="switchTab('budget',this)">🧮 Pay Calculator</button>
+  <button class="main-tab"         onclick="switchTab('cc',this)">💳 Credit Card</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 1 — MONTHLY TRACKER
+══════════════════════════════════════ -->
+<div id="tab-monthly" class="view active">
+  <div class="month-nav">
+    <select id="month-select" onchange="renderMonthly()"></select>
+    <span id="month-badge"></span>
+    <span id="carry-badge"></span>
+    <button class="btn btn-outline" onclick="prevMonth()">← Prev</button>
+    <button class="btn btn-outline" onclick="nextMonth()">Next →</button>
+  </div>
+
+  <div class="pills" id="monthly-pills"></div>
+
+  <div id="fn-blocks"></div>
+
+  <div class="card" style="border-left:4px solid var(--accent2)">
+    <div class="card-title">Month summary</div>
+    <div id="month-summary"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 2 — SPENDING ANALYSIS
+══════════════════════════════════════ -->
+<div id="tab-analysis" class="view">
+  <div class="info">Spending totals pulled from everything you've entered in the Monthly Tracker. Select a month or view all time. Categories with the biggest share of your income are flagged.</div>
+
+  <div class="month-nav" style="margin-bottom:12px">
+    <select id="analysis-month" onchange="renderAnalysis()">
+      <option value="all">All months combined</option>
+    </select>
+  </div>
+
+  <div class="g2" style="align-items:start">
+    <div class="card">
+      <div class="card-title">Spending by category</div>
+      <div id="analysis-bars"></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Income vs spending</div>
+        <div id="analysis-summary"></div>
+      </div>
+      <div class="card" style="margin-top:0">
+        <div class="card-title">Top insights</div>
+        <div id="analysis-insights"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 3 — PAY CALCULATOR
+══════════════════════════════════════ -->
+<div id="tab-budget" class="view">
+  <div class="info">Your PAYE is pre-set to $99.82/fn (your actual payslip amount). Adjust any field and hit <strong>→ Update net pay</strong> to push the new net through to all other tabs.</div>
+  <div class="g2" style="align-items:start">
+    <div class="card">
+      <div class="card-title">Gross pay details</div>
+      <div class="field"><label>Gross pay per fortnight (FJD $)</label>
+        <input type="number" id="g-gross" value="1720.30" step="0.01" oninput="calcGross()"/></div>
+      <div class="slabel">Deductions per fortnight</div>
+      <div class="field"><label>PAYE tax (from payslip)</label>
+        <input type="number" id="g-paye" value="99.82" step="0.01" oninput="calcGross()"/>
+        <div class="hint">Update this when your payslip PAYE changes</div></div>
+      <div class="field"><label>FNPF employee share (%)</label>
+        <input type="number" id="g-fnpf-rate" value="8" step="0.01" oninput="calcGross()"/></div>
+      <div class="field"><label>Credit Union ($)</label>
+        <input type="number" id="g-cu" value="300.00" step="0.01" oninput="calcGross()"/></div>
+      <div class="field"><label>BSP Life Insurance ($)</label>
+        <input type="number" id="g-life" value="100.00" step="0.01" oninput="calcGross()"/></div>
+      <div class="field"><label>Other deduction ($)</label>
+        <input type="number" id="g-other" value="0" step="0.01" oninput="calcGross()"/></div>
+      <button class="btn btn-success" onclick="applyNet()">→ Update net pay across all tabs</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Breakdown this fortnight</div>
+      <div class="rr"><span class="rl">Gross pay</span><span class="rv green" id="r-gross">—</span></div>
+      <div class="rr"><span class="rl">PAYE tax</span><span class="rv red" id="r-paye">—</span></div>
+      <div class="rr"><span class="rl">FNPF (your share)</span><span class="rv red" id="r-fnpf">—</span></div>
+      <div class="rr"><span class="rl">Credit Union</span><span class="rv red" id="r-cu">—</span></div>
+      <div class="rr"><span class="rl">BSP Life</span><span class="rv red" id="r-life">—</span></div>
+      <div class="rr" id="r-other-row" style="display:none"><span class="rl">Other</span><span class="rv red" id="r-other">—</span></div>
+      <div class="rr"><span class="rl">Total deductions</span><span class="rv red" id="r-total-ded">—</span></div>
+      <hr class="div">
+      <div class="rr big"><span class="rl">Net take-home</span><span class="rv green" id="r-net">—</span></div>
+      <hr class="div">
+      <div class="rr"><span class="rl">2-pay month</span><span class="rv blue" id="r-2pay">—</span></div>
+      <div class="rr"><span class="rl">3-pay month</span><span class="rv green" id="r-3pay">—</span></div>
+      <div class="rr"><span class="rl">Annual gross</span><span class="rv" id="r-annual">—</span></div>
+      <div class="rr"><span class="rl">FNPF employer match</span><span class="rv green" id="r-employer-fnpf">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 4 — CREDIT CARD TRACKER
+══════════════════════════════════════ -->
+<div id="tab-cc" class="view">
+  <div class="g2" style="align-items:start">
+    <div class="card">
+      <div class="card-title">Credit card setup</div>
+      <div class="field"><label>Current balance owed (FJD $)</label>
+        <input type="number" id="cc-balance" value="5000" step="0.01" oninput="renderCC()"/></div>
+      <div class="field"><label>Interest rate (% per month)</label>
+        <input type="number" id="cc-rate" value="1.5" step="0.01" oninput="renderCC()"/>
+        <div class="hint">Typical BSP/ANZ Fiji rate ~18% p.a. = 1.5%/month — check your statement</div></div>
+      <div class="field"><label>Minimum monthly payment (FJD $)</label>
+        <input type="number" id="cc-min" value="250" step="1" oninput="renderCC()"/>
+        <div class="hint">This is your current monthly credit card expense</div></div>
+      <div class="field"><label>Extra payment per month (FJD $)</label>
+        <input type="number" id="cc-extra" value="0" step="1" oninput="renderCC()"/>
+        <div class="hint">Any extra you can add in 3-pay months or when budget allows</div></div>
+      <div class="slabel" style="margin-top:12px">Actual payments logged</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5">Log each payment you make. Optionally enter the <strong>balance from your statement</strong> — this overrides the forecast to use your real balance, keeping it accurate even if interest varied.</div>
+      <div id="cc-actuals"></div>
+      <div class="btn-row"><button class="btn btn-outline" onclick="addCCActual()">+ Log a payment</button></div>
+    </div>
+    <div>
+      <div class="pills" id="cc-pills"></div>
+      <div class="card">
+        <div class="card-title">Payoff forecast</div>
+        <div class="cc-timeline" id="cc-timeline"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast">✓ Saved</div>
+
+<script>
+/* ════════════════════════════════════════
+   GLOBAL STATE — persisted to localStorage
+════════════════════════════════════════ */
+const FIRST_PAY = new Date(2026,8,9); // Sep 9 2026
+const NET_DEFAULT = 1082.86;
+const MONTHS_AHEAD = 18;
+const CATS = ['Rent','Food & Groceries','Transport','Credit Card','Data & Phone','Entertainment','Health','Clothing','Savings/Transfer','Other'];
+const CAT_COLORS = ['#1A56A0','#0E9B6E','#F59E0B','#C0392B','#8B5CF6','#EC4899','#06B6D4','#F97316','#10B981','#6B7280'];
+
+let state = {
+  netPerFn: NET_DEFAULT,
+  months: {},      // key: 'YYYY-MM' → { fortnights: [{date,net,expenses:[{name,cat,amount}]}], carryIn:0 }
+  ccActuals: [],   // [{date,amount}]
+};
+
+function load() {
+  try { const s = localStorage.getItem('fiji_budget_v2'); if(s) state = JSON.parse(s); } catch(e){}
+  if (!state.months) state.months = {};
+  if (!state.ccActuals) state.ccActuals = [];
+  if (!state.netPerFn) state.netPerFn = NET_DEFAULT;
+}
+function save() {
+  try { localStorage.setItem('fiji_budget_v2', JSON.stringify(state)); } catch(e){}
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ════════════════════════════════════════
+   PAY DATE HELPERS
+════════════════════════════════════════ */
+function getPayDates(months) {
+  const dates = []; let d = new Date(FIRST_PAY);
+  const end = new Date(FIRST_PAY); end.setMonth(end.getMonth() + months + 2);
+  while (d <= end) { dates.push(new Date(d)); d = new Date(d); d.setDate(d.getDate()+14); }
+  return dates;
+}
+const ALL_PAY_DATES = getPayDates(MONTHS_AHEAD + 4);
+
+function paysInMonth(yr, mo) {
+  return ALL_PAY_DATES.filter(d => d.getFullYear()===yr && d.getMonth()===mo);
+}
+
+function getMonthKeys() {
+  const keys = []; const start = new Date(FIRST_PAY);
+  start.setDate(1);
+  for (let i=0; i<MONTHS_AHEAD; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth()+i, 1);
+    keys.push(fmtKey(d.getFullYear(), d.getMonth()));
+  }
+  return keys;
+}
+function fmtKey(yr, mo) { return yr+'-'+(mo<9?'0':'')+(mo+1); }
+function keyToDate(k) { const [y,m]=k.split('-').map(Number); return new Date(y,m-1,1); }
+function fmtDate(d) {
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+}
+function fmtMonth(k) {
+  const d=keyToDate(k);
+  return ['January','February','March','April','May','June','July','August','September','October','November','December'][d.getMonth()]+' '+d.getFullYear();
+}
+
+function ensureMonth(key) {
+  if (!state.months[key]) {
+    const d = keyToDate(key);
+    const pays = paysInMonth(d.getFullYear(), d.getMonth());
+    state.months[key] = {
+      fortnights: pays.map(pd => ({ date: pd.toISOString(), net: state.netPerFn, extras: [], expenses: [] })),
+      carryIn: 0
+    };
+  }
+  // patch: ensure net and extras are set if missing
+  state.months[key].fortnights.forEach(fn => {
+    if (!fn.net) fn.net = state.netPerFn;
+    if (!fn.extras) fn.extras = [];
+  });
+}
+
+function computeCarryForward() {
+  const keys = getMonthKeys();
+  let carry = 0;
+  keys.forEach((key) => {
+    ensureMonth(key);
+    state.months[key].carryIn = carry;
+    const m = state.months[key];
+    const income = m.fortnights.reduce((s,fn) => {
+      const extraTotal = (fn.extras||[]).reduce((es,ex)=>es+(parseFloat(ex.amount)||0),0);
+      return s + (parseFloat(fn.net)||0) + extraTotal;
+    }, 0);
+    const spent  = m.fortnights.reduce((s,fn) => s + fn.expenses.reduce((es,e) => es+(parseFloat(e.amount)||0), 0), 0);
+    const left   = income - spent + carry;
+    carry = Math.max(0, left);
+  });
+}
+
+/* ════════════════════════════════════════
+   TAB SWITCHING
+════════════════════════════════════════ */
+let currentTab = 'monthly';
+function switchTab(name, btn) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  currentTab = name;
+  if (name==='monthly') renderMonthly();
+  if (name==='analysis') renderAnalysis();
+  if (name==='budget') calcGross();
+  if (name==='cc') renderCC();
+}
+
+/* ════════════════════════════════════════
+   MONTH SELECTOR INIT
+════════════════════════════════════════ */
+let currentMonthKey = '';
+function initMonthSelect() {
+  const sel = document.getElementById('month-select');
+  const amSel = document.getElementById('analysis-month');
+  sel.innerHTML = ''; amSel.innerHTML = '<option value="all">All months combined</option>';
+  const keys = getMonthKeys();
+  keys.forEach(k => {
+    const o = document.createElement('option'); o.value=k; o.textContent=fmtMonth(k); sel.appendChild(o);
+    const o2 = document.createElement('option'); o2.value=k; o2.textContent=fmtMonth(k); amSel.appendChild(o2);
+  });
+  // default: Sep 2026
+  currentMonthKey = keys[0];
+  sel.value = currentMonthKey;
+}
+function prevMonth() {
+  const keys=getMonthKeys(), i=keys.indexOf(currentMonthKey);
+  if (i>0) { currentMonthKey=keys[i-1]; document.getElementById('month-select').value=currentMonthKey; renderMonthly(); }
+}
+function nextMonth() {
+  const keys=getMonthKeys(), i=keys.indexOf(currentMonthKey);
+  if (i<keys.length-1) { currentMonthKey=keys[i+1]; document.getElementById('month-select').value=currentMonthKey; renderMonthly(); }
+}
+
+/* ════════════════════════════════════════
+   TAB 1 — MONTHLY TRACKER
+════════════════════════════════════════ */
+function renderMonthly() {
+  currentMonthKey = document.getElementById('month-select').value;
+  computeCarryForward();
+  ensureMonth(currentMonthKey);
+  const m = state.months[currentMonthKey];
+  const d = keyToDate(currentMonthKey);
+  const yr = d.getFullYear(), mo = d.getMonth();
+  const isTriple = paysInMonth(yr,mo).length === 3;
+
+  // badges
+  document.getElementById('month-badge').innerHTML =
+    `<span class="badge ${isTriple?'badge-3pay':'badge-2pay'}">${isTriple?'★ 3-pay month':'2-pay month'}</span>`;
+  document.getElementById('carry-badge').innerHTML = m.carryIn > 0
+    ? `<span class="badge badge-carry">Carried in: $${m.carryIn.toFixed(2)}</span>` : '';
+
+  // pills
+  const payIncome = m.fortnights.reduce((s,fn)=>s+(parseFloat(fn.net)||0),0);
+  const extraIncome = m.fortnights.reduce((s,fn)=>(fn.extras||[]).reduce((es,ex)=>es+(parseFloat(ex.amount)||0),s),0);
+  const income = payIncome + extraIncome;
+  const spent  = m.fortnights.reduce((s,fn)=>s+fn.expenses.reduce((es,e)=>es+(parseFloat(e.amount)||0),0),0);
+  const left   = income - spent + m.carryIn;
+  document.getElementById('monthly-pills').innerHTML = `
+    <div class="pill"><div class="pl">Pay take-home</div><div class="pv blue">$${payIncome.toFixed(2)}</div><div class="ps">${m.fortnights.length} pays this month</div></div>
+    ${extraIncome>0?`<div class="pill"><div class="pl">Extra income</div><div class="pv green">+$${extraIncome.toFixed(2)}</div></div>`:''}
+    <div class="pill"><div class="pl">Carried in</div><div class="pv orange">$${m.carryIn.toFixed(2)}</div></div>
+    <div class="pill"><div class="pl">Total available</div><div class="pv green">$${(income+m.carryIn).toFixed(2)}</div></div>
+    <div class="pill"><div class="pl">Total spent</div><div class="pv red">$${spent.toFixed(2)}</div></div>
+    <div class="pill"><div class="pl">Left over</div><div class="pv ${left<0?'red':left<200?'orange':'green'}">$${left.toFixed(2)}</div><div class="ps">carries to next month</div></div>
+  `;
+
+  // fortnight blocks
+  const container = document.getElementById('fn-blocks');
+  container.innerHTML = '';
+  m.fortnights.forEach((fn, fi) => {
+    const fnDate = new Date(fn.date);
+    const fnSpent = fn.expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+    const fnLeft  = (parseFloat(fn.net)||0) - fnSpent;
+
+    const fnExtras = (fn.extras||[]);
+    const fnExtraTotal = fnExtras.reduce((s,ex)=>s+(parseFloat(ex.amount)||0),0);
+    const fnTotalIn = (parseFloat(fn.net)||0) + fnExtraTotal;
+    const fnLeftUpdated = fnTotalIn - fnSpent;
+
+    const block = document.createElement('div');
+    block.className = 'fn-block';
+    block.innerHTML = `
+      <div class="fn-header">
+        <div>
+          <div class="fn-date">Fortnight ${fi+1} · Pay date: ${fmtDate(fnDate)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Spent $${fnSpent.toFixed(2)} of $${fnTotalIn.toFixed(2)} total in</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--muted)">Net pay received</div>
+            <input type="number" value="${parseFloat(fn.net).toFixed(2)}" step="0.01" style="width:110px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-weight:700;color:var(--accent2);text-align:right"
+              onchange="updateFnNet('${currentMonthKey}',${fi},this.value)"/>
+          </div>
+          ${fnExtraTotal>0?`<div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Extra income</div><div style="font-size:14px;font-weight:700;color:var(--accent2)">+$${fnExtraTotal.toFixed(2)}</div></div>`:''}
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--muted)">Left</div>
+            <div style="font-size:16px;font-weight:700;color:${fnLeftUpdated<0?'var(--danger)':fnLeftUpdated<100?'var(--warn)':'var(--accent2)'}" id="fn-left-${fi}">$${fnLeftUpdated.toFixed(2)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="fn-body">
+
+        <div style="background:#F0FBF6;border:1px solid #B2E4CE;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0A7A56;margin-bottom:8px">💰 Extra income this fortnight</div>
+          <div id="extra-list-${fi}"></div>
+          <button onclick="addExtra('${currentMonthKey}',${fi})" style="margin-top:6px;font-size:12px;padding:4px 10px;border-radius:5px;border:1px dashed #0E9B6E;background:none;color:#0E9B6E;cursor:pointer;font-weight:500">+ Add extra income (CU withdrawal, bonus, gift…)</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 130px 150px 34px;gap:6px;margin-bottom:6px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Expense</div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Category</div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Amount (FJD)</div>
+          <div></div>
+        </div>
+        <div id="exp-list-${fi}"></div>
+        <div class="btn-row" style="margin-top:10px">
+          <button class="btn btn-primary" onclick="addExpense('${currentMonthKey}',${fi})" style="font-size:12px;padding:6px 12px">+ Add expense</button>
+          <button class="btn btn-outline" onclick="addCommonExpenses('${currentMonthKey}',${fi})" style="font-size:12px;padding:6px 12px">+ Quick-add common</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(block);
+    renderExtraList(currentMonthKey, fi);
+    renderExpList(currentMonthKey, fi);
+  });
+
+  // month summary
+  renderMonthlySummary(currentMonthKey);
+}
+
+function renderExtraList(key, fi) {
+  const fn = state.months[key].fortnights[fi];
+  const container = document.getElementById('extra-list-'+fi);
+  if (!container) return;
+  container.innerHTML = '';
+  (fn.extras||[]).forEach((ex, ei) => {
+    const row = document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:1fr 130px 34px;gap:8px;align-items:center;margin-bottom:6px';
+    row.innerHTML=`
+      <input type="text" value="${ex.label||''}" placeholder="e.g. CU withdrawal, Bonus, Gift" style="padding:5px 8px;border:1px solid #B2E4CE;border-radius:6px;font-size:13px;background:#fff"
+        onchange="updateExtra('${key}',${fi},${ei},'label',this.value)"/>
+      <input type="number" value="${parseFloat(ex.amount||0).toFixed(2)}" min="0" step="0.01" style="padding:5px 8px;border:1px solid #B2E4CE;border-radius:6px;font-size:13px;text-align:right;background:#fff"
+        onchange="updateExtra('${key}',${fi},${ei},'amount',this.value)"/>
+      <button class="btn-del" onclick="deleteExtra('${key}',${fi},${ei})">✕</button>`;
+    container.appendChild(row);
+  });
+  refreshFnTotals(key, fi);
+}
+function addExtra(key, fi) {
+  if (!state.months[key].fortnights[fi].extras) state.months[key].fortnights[fi].extras=[];
+  state.months[key].fortnights[fi].extras.push({label:'',amount:0});
+  save(); renderExtraList(key, fi); renderMonthlySummary(key);
+}
+function updateExtra(key, fi, ei, field, val) {
+  state.months[key].fortnights[fi].extras[ei][field] = field==='amount'?parseFloat(val)||0:val;
+  save(); refreshFnTotals(key, fi); renderMonthlySummary(key); computeCarryForward(); renderMonthly();
+}
+function deleteExtra(key, fi, ei) {
+  state.months[key].fortnights[fi].extras.splice(ei,1);
+  save(); renderMonthly();
+}
+
+function renderExpList(key, fi) {
+  const fn = state.months[key].fortnights[fi];
+  const container = document.getElementById('exp-list-'+fi);
+  if (!container) return;
+  container.innerHTML = '';
+  if (fn.expenses.length === 0) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 0 8px">No expenses logged yet — add below</div>';
+    return;
+  }
+  fn.expenses.forEach((exp, ei) => {
+    const row = document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:1fr 130px 150px 34px;gap:6px;align-items:center;margin-bottom:7px';
+    row.innerHTML = `
+      <input type="text" value="${exp.name}" placeholder="Description" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px"
+        onchange="updateExp('${key}',${fi},${ei},'name',this.value)"/>
+      <select style="padding:6px 7px;border:1px solid var(--border);border-radius:6px;font-size:12px"
+        onchange="updateExp('${key}',${fi},${ei},'cat',this.value)">
+        ${CATS.map(c=>`<option value="${c}" ${exp.cat===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+      <input type="number" value="${parseFloat(exp.amount).toFixed(2)}" min="0" step="0.01" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:right"
+        onchange="updateExp('${key}',${fi},${ei},'amount',this.value)"/>
+      <button class="btn-del" onclick="deleteExp('${key}',${fi},${ei})">✕</button>
+    `;
+    container.appendChild(row);
+  });
+  refreshFnTotals(key, fi);
+}
+
+function updateFnNet(key, fi, val) {
+  state.months[key].fortnights[fi].net = parseFloat(val)||0;
+  save(); computeCarryForward(); renderMonthly();
+}
+function updateExp(key, fi, ei, field, val) {
+  state.months[key].fortnights[fi].expenses[ei][field] = field==='amount' ? parseFloat(val)||0 : val;
+  save(); refreshFnTotals(key, fi); renderMonthlySummary(key); computeCarryForward();
+  document.getElementById('monthly-pills') && renderMonthly();
+}
+function deleteExp(key, fi, ei) {
+  state.months[key].fortnights[fi].expenses.splice(ei,1);
+  save(); renderMonthly();
+}
+function addExpense(key, fi) {
+  state.months[key].fortnights[fi].expenses.push({name:'',cat:'Other',amount:0});
+  save(); renderExpList(key, fi);
+}
+function addCommonExpenses(key, fi) {
+  const defaults = [
+    {name:'Rent',cat:'Rent',amount:600},
+    {name:'Groceries',cat:'Food & Groceries',amount:150},
+    {name:'Bus fare',cat:'Transport',amount:25},
+    {name:'Data',cat:'Data & Phone',amount:15},
+  ];
+  defaults.forEach(d => state.months[key].fortnights[fi].expenses.push({...d}));
+  save(); renderExpList(key, fi); renderMonthlySummary(key);
+}
+
+function refreshFnTotals(key, fi) {
+  const fn = state.months[key].fortnights[fi];
+  const spent = fn.expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+  const extraTotal = (fn.extras||[]).reduce((s,ex)=>s+(parseFloat(ex.amount)||0),0);
+  const left  = (parseFloat(fn.net)||0) + extraTotal - spent;
+  const el = document.getElementById('fn-left-'+fi);
+  if (el) { el.textContent='$'+left.toFixed(2); el.style.color=left<0?'var(--danger)':left<100?'var(--warn)':'var(--accent2)'; }
+}
+
+function renderMonthlySummary(key) {
+  const m = state.months[key];
+  const payIncome = m.fortnights.reduce((s,fn)=>s+(parseFloat(fn.net)||0),0);
+  const extraIncome = m.fortnights.reduce((s,fn)=>(fn.extras||[]).reduce((es,ex)=>es+(parseFloat(ex.amount)||0),s),0);
+  const income = payIncome + extraIncome;
+  const catTotals = {};
+  CATS.forEach(c=>catTotals[c]=0);
+  m.fortnights.forEach(fn=>fn.expenses.forEach(e=>{
+    const c = e.cat||'Other'; catTotals[c]=(catTotals[c]||0)+(parseFloat(e.amount)||0);
+  }));
+  const spent = Object.values(catTotals).reduce((s,v)=>s+v,0);
+  const left  = income - spent + m.carryIn;
+
+  // collect extra income lines for display
+  const extraLines = [];
+  m.fortnights.forEach((fn,fi)=>(fn.extras||[]).forEach(ex=>{
+    if(parseFloat(ex.amount)>0) extraLines.push(`FN${fi+1}: ${ex.label||'Extra income'} +$${parseFloat(ex.amount).toFixed(2)}`);
+  }));
+
+  const el = document.getElementById('month-summary');
+  if (!el) return;
+  const rows = CATS.filter(c=>catTotals[c]>0).sort((a,b)=>catTotals[b]-catTotals[a]);
+  el.innerHTML = `
+    <div class="rr"><span class="rl">Pay take-home</span><span class="rv green">$${payIncome.toFixed(2)}</span></div>
+    ${extraLines.map(l=>`<div class="rr"><span class="rl" style="color:var(--accent2)">${l}</span><span class="rv green">↑ included</span></div>`).join('')}
+    ${extraIncome>0?`<div class="rr"><span class="rl">Total extra income</span><span class="rv green">+$${extraIncome.toFixed(2)}</span></div>`:''}
+    <div class="rr"><span class="rl">Carried in from last month</span><span class="rv orange">+$${m.carryIn.toFixed(2)}</span></div>
+    <hr class="div">
+    ${rows.map(c=>`<div class="rr"><span class="rl">${c}</span><span class="rv red">-$${catTotals[c].toFixed(2)}</span></div>`).join('')}
+    <div class="rr"><span class="rl">Total spent</span><span class="rv red">-$${spent.toFixed(2)}</span></div>
+    <hr class="div">
+    <div class="rr big"><span class="rl">Left over → carries to next month</span><span class="rv ${left<0?'red':left<200?'orange':'green'}">$${left.toFixed(2)}</span></div>
+  `;
+}
+
+/* ════════════════════════════════════════
+   TAB 2 — SPENDING ANALYSIS
+════════════════════════════════════════ */
+function renderAnalysis() {
+  const sel = document.getElementById('analysis-month').value;
+  const keys = getMonthKeys();
+
+  let totalIncome=0, totalSpent=0;
+  const catTotals={};CATS.forEach(c=>catTotals[c]=0);
+
+  const targetKeys = sel==='all' ? keys : [sel];
+  targetKeys.forEach(k=>{
+    ensureMonth(k);
+    const m=state.months[k];
+    totalIncome += m.fortnights.reduce((s,fn)=>{
+      const ex=(fn.extras||[]).reduce((es,e)=>es+(parseFloat(e.amount)||0),0);
+      return s+(parseFloat(fn.net)||0)+ex;
+    },0);
+    m.fortnights.forEach(fn=>fn.expenses.forEach(e=>{
+      catTotals[e.cat||'Other']=(catTotals[e.cat||'Other']||0)+(parseFloat(e.amount)||0);
+    }));
+  });
+  totalSpent=Object.values(catTotals).reduce((s,v)=>s+v,0);
+  const left=totalIncome-totalSpent;
+
+  // bars
+  const barsEl=document.getElementById('analysis-bars');
+  const sorted=CATS.filter(c=>catTotals[c]>0).sort((a,b)=>catTotals[b]-catTotals[a]);
+  const maxAmt=sorted.length>0?catTotals[sorted[0]]:1;
+  barsEl.innerHTML = sorted.length===0
+    ? '<div style="font-size:13px;color:var(--muted)">No expenses logged yet. Add some in the Monthly Tracker.</div>'
+    : sorted.map((c,i)=>{
+        const pct=totalIncome>0?(catTotals[c]/totalIncome*100):0;
+        const barPct=(catTotals[c]/maxAmt*100);
+        const col=CAT_COLORS[CATS.indexOf(c)%CAT_COLORS.length];
+        const flag=pct>30?'⚠️ ':pct>20?'🔶 ':'';
+        return `<div class="spend-bar-row">
+          <div class="spend-bar-label">${flag}${c}</div>
+          <div class="spend-bar-wrap"><div class="spend-bar-fill" style="width:${barPct}%;background:${col}"></div>
+            <div class="spend-bar-val">$${catTotals[c].toFixed(0)}</div></div>
+          <div class="spend-bar-pct">${pct.toFixed(1)}%</div>
+        </div>`;
+      }).join('');
+
+  // summary
+  document.getElementById('analysis-summary').innerHTML=`
+    <div class="rr"><span class="rl">Total income</span><span class="rv green">$${totalIncome.toFixed(2)}</span></div>
+    <div class="rr"><span class="rl">Total spent</span><span class="rv red">-$${totalSpent.toFixed(2)}</span></div>
+    <div class="rr big"><span class="rl">Net saved</span><span class="rv ${left<0?'red':'green'}">$${left.toFixed(2)}</span></div>
+    <div class="rr"><span class="rl">Savings rate</span><span class="rv blue">${totalIncome>0?((left/totalIncome)*100).toFixed(1):0}%</span></div>
+  `;
+
+  // insights
+  const ins=[];
+  if(totalIncome===0){ins.push('No data yet — add expenses in Monthly Tracker first.');}
+  else {
+    const topCat=sorted[0];
+    if(topCat) ins.push(`💸 <strong>${topCat}</strong> is your biggest spend at <strong>$${catTotals[topCat].toFixed(2)}</strong> (${(catTotals[topCat]/totalIncome*100).toFixed(1)}% of income).`);
+    if(catTotals['Food & Groceries']>0&&(catTotals['Food & Groceries']/totalIncome)>0.2) ins.push('🛒 Food & Groceries is over 20% of income — meal planning could help reduce this.');
+    if(catTotals['Entertainment']>0) ins.push(`🎉 Entertainment: $${catTotals['Entertainment'].toFixed(2)} — consider if any of this can be trimmed.`);
+    if(left<0) ins.push('🚨 Spending exceeds income for this period — review your largest categories.');
+    else if((left/totalIncome)>0.2) ins.push(`✅ Great job — you're saving ${((left/totalIncome)*100).toFixed(1)}% of income.`);
+    if(catTotals['Savings/Transfer']>0) ins.push(`💰 Intentional savings/transfers: $${catTotals['Savings/Transfer'].toFixed(2)} — well done!`);
+  }
+  document.getElementById('analysis-insights').innerHTML=ins.map(i=>`<div style="font-size:13px;line-height:1.6;padding:5px 0;border-bottom:1px solid var(--border)">${i}</div>`).join('');
+}
+
+/* ════════════════════════════════════════
+   TAB 3 — PAY CALCULATOR
+════════════════════════════════════════ */
+function calcGross() {
+  const gross    = parseFloat(document.getElementById('g-gross').value)||0;
+  const paye     = parseFloat(document.getElementById('g-paye').value)||0;
+  const fnpfRate = (parseFloat(document.getElementById('g-fnpf-rate').value)||8)/100;
+  const cu       = parseFloat(document.getElementById('g-cu').value)||0;
+  const life     = parseFloat(document.getElementById('g-life').value)||0;
+  const other    = parseFloat(document.getElementById('g-other').value)||0;
+  const fnpf     = parseFloat((gross*fnpfRate).toFixed(2));
+  const totalDed = paye+fnpf+cu+life+other;
+  const net      = parseFloat((gross-totalDed).toFixed(2));
+  const f=n=>'$'+Math.abs(n).toFixed(2);
+  document.getElementById('r-gross').textContent=f(gross);
+  document.getElementById('r-paye').textContent='-'+f(paye);
+  document.getElementById('r-fnpf').textContent='-'+f(fnpf);
+  document.getElementById('r-cu').textContent='-'+f(cu);
+  document.getElementById('r-life').textContent='-'+f(life);
+  if(other>0){document.getElementById('r-other').textContent='-'+f(other);document.getElementById('r-other-row').style.display='';}
+  else document.getElementById('r-other-row').style.display='none';
+  document.getElementById('r-total-ded').textContent='-'+f(totalDed);
+  document.getElementById('r-net').textContent=f(net);
+  document.getElementById('r-net').className='rv '+(net>0?'green':'red');
+  document.getElementById('r-2pay').textContent='$'+(net*2).toFixed(2);
+  document.getElementById('r-3pay').textContent='$'+(net*3).toFixed(2);
+  document.getElementById('r-annual').textContent='$'+(gross*26).toFixed(2);
+  document.getElementById('r-employer-fnpf').textContent='$'+(fnpf*26).toFixed(2)+'/yr';
+  document.getElementById('header-net').textContent='Net/fn: $'+net.toFixed(2);
+  return net;
+}
+function applyNet() {
+  const net = calcGross();
+  state.netPerFn = net;
+  save(); computeCarryForward(); toast('Net pay updated — all tabs refreshed ✓');
+}
+
+/* ════════════════════════════════════════
+   TAB 4 — CREDIT CARD TRACKER
+════════════════════════════════════════ */
+function addCCActual() {
+  const today=new Date(); const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  state.ccActuals.push({date:today.getDate()+' '+mo[today.getMonth()]+' '+today.getFullYear(),amount:0,balAfter:null});
+  save(); renderCC();
+}
+function renderCC() {
+  const setupBalance = parseFloat(document.getElementById('cc-balance').value)||0;
+  const rate     = (parseFloat(document.getElementById('cc-rate').value)||1.5)/100;
+  const minPay   = parseFloat(document.getElementById('cc-min').value)||0;
+  const extra    = parseFloat(document.getElementById('cc-extra').value)||0;
+  const monthly  = minPay + extra;
+
+  // actuals — render with date, amount paid, and optional balance-after field
+  const actDiv = document.getElementById('cc-actuals');
+  actDiv.innerHTML='';
+  if (state.ccActuals.length > 0) {
+    const hdr = document.createElement('div');
+    hdr.style.cssText='display:grid;grid-template-columns:1fr 100px 120px 34px;gap:8px;margin-bottom:5px';
+    hdr.innerHTML=`
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Date</div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Amount paid</div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Balance after (opt.)</div>
+      <div></div>`;
+    actDiv.appendChild(hdr);
+  }
+  state.ccActuals.forEach((a,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:1fr 100px 120px 34px;gap:8px;align-items:center;margin-bottom:7px';
+    row.innerHTML=`
+      <input type="text" value="${a.date}" placeholder="e.g. 9 Sep 2026" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px"
+        onchange="state.ccActuals[${i}].date=this.value;save()"/>
+      <input type="number" value="${a.amount||''}" min="0" step="1" placeholder="$0.00" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:right"
+        onchange="state.ccActuals[${i}].amount=parseFloat(this.value)||0;save();renderCC()"/>
+      <input type="number" value="${a.balAfter!=null?a.balAfter:''}" min="0" step="0.01" placeholder="from statement" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:right;${a.balAfter!=null?'border-color:var(--accent2);background:#F0FBF6;':''}"
+        title="Enter your actual balance from your statement to correct the forecast"
+        onchange="state.ccActuals[${i}].balAfter=this.value===''?null:parseFloat(this.value);save();renderCC()"/>
+      <button class="btn-del" onclick="state.ccActuals.splice(${i},1);save();renderCC()" title="Remove">✕</button>`;
+    actDiv.appendChild(row);
+  });
+
+  // Work out the true starting balance for the forecast:
+  // If any actual payment has a "balance after" entered, use the most recent one as the forecast start.
+  // Then subtract any subsequent actual payments (without a balance-after) on top.
+  let forecastStart = setupBalance;
+  let lastBalAfterIdx = -1;
+  state.ccActuals.forEach((a,i) => { if (a.balAfter != null) lastBalAfterIdx = i; });
+  if (lastBalAfterIdx >= 0) {
+    forecastStart = parseFloat(state.ccActuals[lastBalAfterIdx].balAfter);
+    // subtract any payments logged after the last balance-after entry
+    for (let i = lastBalAfterIdx+1; i < state.ccActuals.length; i++) {
+      forecastStart = Math.max(0, forecastStart - (parseFloat(state.ccActuals[i].amount)||0));
+    }
+  } else {
+    // No balance-after entries: subtract all logged payments from setup balance
+    const totalPaid = state.ccActuals.reduce((s,a)=>s+(parseFloat(a.amount)||0),0);
+    forecastStart = Math.max(0, setupBalance - totalPaid);
+  }
+  forecastStart = parseFloat(forecastStart.toFixed(2));
+
+  // forecast from forecastStart
+  let bal = forecastStart;
+  let totalInterest=0;
+  const rows=[];
+  const startDate=new Date(2026,8,1);
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let cleared=false;
+
+  for(let m=0;m<60&&!cleared;m++){
+    const d=new Date(startDate.getFullYear(),startDate.getMonth()+m,1);
+    const label=mNames[d.getMonth()]+' '+d.getFullYear();
+    const interest=parseFloat((bal*rate).toFixed(2));
+    totalInterest+=interest;
+    let payment=monthly;
+    if(bal+interest<=payment){payment=parseFloat((bal+interest).toFixed(2));cleared=true;}
+    bal=parseFloat((bal+interest-payment).toFixed(2));
+    rows.push({label,interest,payment,balance:cleared?0:bal,isFinal:cleared});
+  }
+
+  const totalPaidActual = state.ccActuals.reduce((s,a)=>s+(parseFloat(a.amount)||0),0);
+  const hasBalAfter = lastBalAfterIdx >= 0;
+
+  // pills
+  document.getElementById('cc-pills').innerHTML=`
+    <div class="pill"><div class="pl">Setup balance</div><div class="pv red">$${setupBalance.toFixed(2)}</div></div>
+    <div class="pill"><div class="pl">Payments logged</div><div class="pv blue">-$${totalPaidActual.toFixed(2)}</div><div class="ps">${state.ccActuals.length} payment(s)</div></div>
+    <div class="pill"><div class="pl">Forecast starts at</div><div class="pv orange">$${forecastStart.toFixed(2)}</div><div class="ps">${hasBalAfter?'from statement balance':'estimated'}</div></div>
+    <div class="pill"><div class="pl">Est. payoff</div><div class="pv green">${rows.find(r=>r.isFinal)?.label||'60+ months'}</div></div>
+    <div class="pill"><div class="pl">Total interest</div><div class="pv orange">$${totalInterest.toFixed(2)}</div></div>
+  `;
+
+  // timeline
+  const tl=document.getElementById('cc-timeline');
+  tl.innerHTML=`
+    <div class="cc-row head">
+      <div>Month</div><div>Interest</div><div>Payment</div><div>Balance</div><div>Progress</div>
+    </div>
+    ${rows.slice(0,36).map(r=>`
+    <div class="cc-row ${r.isFinal?'cleared':''}">
+      <div>${r.label}${r.isFinal?' ✓':''}</div>
+      <div style="color:var(--danger)">$${r.interest.toFixed(2)}</div>
+      <div>-$${r.payment.toFixed(2)}</div>
+      <div style="font-weight:600">${r.isFinal?'Cleared!':'$'+r.balance.toFixed(2)}</div>
+      <div><div style="background:var(--surface2);height:6px;border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${r.isFinal?'var(--accent2)':'var(--accent)'};width:${Math.max(2,100-(r.balance/forecastStart*100)).toFixed(1)}%"></div></div></div>
+    </div>`).join('')}
+  `;
+}
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+load();
+initMonthSelect();
+computeCarryForward();
+renderMonthly();
+calcGross();
+renderCC();
+document.getElementById('header-net').textContent='Net/fn: $'+state.netPerFn.toFixed(2);
+</script>
+</body>
+</html>
